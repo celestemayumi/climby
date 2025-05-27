@@ -1,0 +1,13 @@
+.vs/
+*.user
+*.suo
+
+*.tmp
+*.log
+
+
+bin/
+obj/
+
+*.nupkg
+packages/
