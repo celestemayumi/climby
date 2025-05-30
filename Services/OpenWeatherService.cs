@@ -2,9 +2,9 @@
 using Newtonsoft.Json.Linq;
 using climby.DTOs;
 using climby.Repositories;
-using climby.Services;
+using System.Text;
 
-namespace SeuProjeto.Services
+namespace climby.Services
 {
     public class OpenWeatherService : IOpenWeatherService
     {
@@ -39,14 +39,37 @@ namespace SeuProjeto.Services
             var temperature = weatherData["main"]["temp"].Value<decimal>();
             var description = weatherData["weather"][0]["description"].Value<string>();
             var icon = weatherData["weather"][0]["icon"].Value<string>();
+            var humidity = weatherData["main"]["humidity"].Value<float>();
+            var pressure = weatherData["main"]["pressure"].Value<float>();
+            var windSpeed = weatherData["wind"]["speed"].Value<float>();
 
             string alertMessage = null;
+            bool shouldAlert = false;
+
 
             if (description.Contains("chuva") || description.Contains("tempestade"))
                 alertMessage = "Alerta de chuva forte. Se estiver em área de risco, procure abrigo!";
             else if (temperature >= 35)
                 alertMessage = "Alerta de calor extremo. Beba bastante água e evite sair no sol!";
 
+            string csvLine = $"{temperature},{humidity},{windSpeed},{pressure},\"{description.Replace("\"", "")}\",{(shouldAlert ? 1 : 0)}";
+
+            string folderPath = Path.Combine(Directory.GetCurrentDirectory(), "Data", "ML");
+            Directory.CreateDirectory(folderPath);
+            string csvPath = Path.Combine(folderPath, "weather-dataset.csv");
+
+
+            bool fileExists = File.Exists(csvPath);
+
+            using (var writer = new StreamWriter(csvPath, append: true, encoding: Encoding.UTF8))
+            {
+                if (!fileExists)
+                {
+                    writer.WriteLine("Temperature,Humidity,WindSpeed,Pressure,Description,ShouldAlert");
+                }
+
+                writer.WriteLine(csvLine);
+            }
 
             return new WeatherInfoDto
             {
