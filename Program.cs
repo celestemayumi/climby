@@ -8,6 +8,7 @@ using climby.Repositories;
 using climby.Services;
 using climby.Data;
 using Microsoft.OpenApi.Models;
+using SeuProjeto.Services;
 
 Env.Load("FIREBASE_ADMIN_JSON.env");
 
@@ -72,6 +73,9 @@ builder.Services.AddSwaggerGen(c =>
 
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddHttpClient<IOpenWeatherService, OpenWeatherService>();
+
+
 
 var app = builder.Build();
 
