@@ -1,5 +1,6 @@
 ﻿using FirebaseAdmin.Auth;
 using System.Security.Claims;
+using climby.Repositories;
 
 namespace climby.Middlewares
 {
@@ -16,14 +17,12 @@ namespace climby.Middlewares
         {
             var path = context.Request.Path.Value?.ToLower();
 
-            // Libera swagger, favicon e ping sem autenticação
             if (path != null && (path.StartsWith("/swagger") || path.StartsWith("/favicon.ico") || path.StartsWith("/ping")))
             {
                 await _next(context);
                 return;
             }
 
-            // Libera requisições OPTIONS (CORS preflight)
             if (context.Request.Method.Equals("OPTIONS", StringComparison.OrdinalIgnoreCase))
             {
                 context.Response.StatusCode = 200;
@@ -42,7 +41,24 @@ namespace climby.Middlewares
                     var decodedToken = await FirebaseAuth.DefaultInstance.VerifyIdTokenAsync(token);
                     var uid = decodedToken.Uid;
 
-                    var claims = new[] { new Claim("uid", uid) };
+                    var userRepository = context.RequestServices.GetRequiredService<IUserRepository>();
+
+                    // Busca o usuário no banco pelo UID do Firebase
+                    var user = await userRepository.GetByFirebaseUidAsync(uid);
+
+                    if (user == null)
+                    {
+                        context.Response.StatusCode = 401;
+                        await context.Response.WriteAsync("Usuário não encontrado.");
+                        return;
+                    }
+
+                    var claims = new List<Claim>
+                    {
+                        new Claim("uid", uid),
+                        new Claim("city", user.City ?? string.Empty)
+                    };
+
                     var identity = new ClaimsIdentity(claims, "Firebase");
                     context.User = new ClaimsPrincipal(identity);
                 }
