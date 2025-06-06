@@ -1,7 +1,6 @@
-﻿
-using Newtonsoft.Json.Linq;
+﻿using Newtonsoft.Json.Linq;
 using climby.DTOs;
-using climby.Repositories;//
+using climby.Repositories;
 using System.Text;
 
 namespace climby.Services
@@ -18,15 +17,12 @@ namespace climby.Services
             _configuration = configuration;
             _userRepository = userRepository;
         }
-        
-        public async Task<WeatherInfoDto> GetWeatherByFirebaseUidAsync(string firebaseUid)
+
+        public async Task<WeatherInfoDto> GetWeatherByCityAsync(string city)
         {
-            var user = await _userRepository.GetByFirebaseUidAsync(firebaseUid);
+            if (string.IsNullOrWhiteSpace(city))
+                throw new ArgumentException("Cidade inválida.");
 
-            if (user == null || string.IsNullOrWhiteSpace(user.City))
-                throw new Exception("Usuário não encontrado ou cidade não definida.");
-
-            var city = user.City;
             var apiKey = _configuration["OpenWeather:ApiKey"];
             var url = $"https://api.openweathermap.org/data/2.5/weather?q={city}&appid={apiKey}&units=metric&lang=pt_br";
 
@@ -46,7 +42,6 @@ namespace climby.Services
             string alertMessage = null;
             bool shouldAlert = false;
 
-
             if (description.Contains("chuva") || description.Contains("tempestade"))
                 alertMessage = "Alerta de chuva forte. Se estiver em área de risco, procure abrigo!";
             else if (temperature >= 35)
@@ -57,7 +52,6 @@ namespace climby.Services
             string folderPath = Path.Combine(Directory.GetCurrentDirectory(), "Data", "ML");
             Directory.CreateDirectory(folderPath);
             string csvPath = Path.Combine(folderPath, "weather-dataset.csv");
-
 
             bool fileExists = File.Exists(csvPath);
 

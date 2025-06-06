@@ -1,85 +1,113 @@
-﻿using climby.DTOs;
+﻿using climby.Data;
+using climby.DTOs;
 using climby.Models;
-using climby.Repositories;
-using climby.Services;
+using Microsoft.EntityFrameworkCore;
 
-public class UserService : IUserService
+namespace climby.Services
 {
-    private readonly IUserRepository _userRepository;
-
-    public UserService(IUserRepository userRepository)
+    public class UserService : IUserService
     {
-        _userRepository = userRepository;
-    }
+        private readonly AppDbContext _context;
 
-    public async Task<UserInfoDto?> GetUserByFirebaseUidAsync(string firebaseUid)
-    {
-        var user = await _userRepository.GetByFirebaseUidAsync(firebaseUid);
-        if (user == null) return null;
-        return MapToDTO(user);
-    }
-
-    public async Task<UserInfoDto> CreateUserAsync(string firebaseUid, UserInfoDto dto)
-    {
-        // Validação básica
-        if (string.IsNullOrWhiteSpace(dto.Name))
-            throw new ArgumentException("Nome é obrigatório.");
-        if (string.IsNullOrWhiteSpace(dto.Email))
-            throw new ArgumentException("Email é obrigatório.");
-
-        var existingUser = await _userRepository.GetByFirebaseUidAsync(firebaseUid);
-        if (existingUser != null)
-            throw new InvalidOperationException("Usuário já existe.");
-
-        var user = new User
+        public UserService(AppDbContext context)
         {
-            Firebase_uid = firebaseUid,
-            Name = dto.Name!,
-            Email = dto.Email!,
-            Country = dto.Country ?? "",
-            City = dto.City ?? ""
-        };
-        await _userRepository.CreateAsync(user);
-        return MapToDTO(user);
-    }
+            _context = context;
+        }
 
-    public async Task<UserInfoDto?> UpdateUserAsync(string firebaseUid, UserInfoDto dto)
-    {
-        var user = await _userRepository.GetByFirebaseUidAsync(firebaseUid);
-        if (user == null) return null;
+        public async Task<List<UserDto>> GetAllAsync()
+        {
+            return await _context.Users
+                .Select(u => new UserDto
+                {
+                    Id = u.ID,
+                    Name = u.Name,
+                    Email = u.Email,
+                    Country = u.Country,
+                    City = u.City
+                })
+                .ToListAsync();
+        }
 
-        // Atualiza só os campos que vieram não nulos
-        if (!string.IsNullOrWhiteSpace(dto.Name))
+        public async Task<UserDto> GetUserByIdAsync(int id)
+        {
+            var user = await _context.Users.FindAsync(id);
+            if (user == null) return null;
+
+            return new UserDto
+            {
+                Id = user.ID,
+                Name = user.Name,
+                Email = user.Email,
+                Country = user.Country,
+                City = user.City
+            };
+        }
+
+        public async Task<User> GetUserByEmailAsync(string email)
+        {
+            return await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
+        }
+
+        public async Task<UserDto> CreateUserAsync(UserInfoDto dto)
+        {
+            // Opcional: impedir cadastro com email repetido
+            var existingUser = await _context.Users.FirstOrDefaultAsync(u => u.Email == dto.Email);
+            if (existingUser != null)
+                throw new InvalidOperationException("Este e-mail já está em uso.");
+
+            var user = new User
+            {
+                Name = dto.Name,
+                Email = dto.Email,
+                Country = dto.Country,
+                City = dto.City,
+                Password = dto.Password
+            };
+
+            _context.Users.Add(user);
+            await _context.SaveChangesAsync();
+
+            return new UserDto
+            {
+                Id = user.ID,
+                Name = user.Name,
+                Email = user.Email,
+                Country = user.Country,
+                City = user.City
+            };
+        }
+
+        public async Task<UserDto> UpdateUserAsync(int id, UserInfoDto dto)
+        {
+            var user = await _context.Users.FindAsync(id);
+            if (user == null) return null;
+
             user.Name = dto.Name;
-        if (!string.IsNullOrWhiteSpace(dto.Email))
             user.Email = dto.Email;
-        if (dto.Country != null)
             user.Country = dto.Country;
-        if (dto.City != null)
             user.City = dto.City;
+            user.Password = dto.Password;
 
-        await _userRepository.UpdateAsync(user);
+            await _context.SaveChangesAsync();
 
-        return MapToDTO(user);
-    }
+            return new UserDto
+            {
+                Id = user.ID,
+                Name = user.Name,
+                Email = user.Email,
+                Country = user.Country,
+                City = user.City
+            };
+        }
 
-    public async Task<bool> DeleteUserAsync(string firebaseUid)
-    {
-        var user = await _userRepository.GetByFirebaseUidAsync(firebaseUid);
-        if (user == null) return false;
-
-        await _userRepository.DeleteAsync(user);
-        return true;
-    }
-
-    private UserInfoDto MapToDTO(User user)
-    {
-        return new UserInfoDto
+        public async Task<bool> DeleteUserAsync(int id)
         {
-            Name = user.Name,
-            Email = user.Email,
-            Country = user.Country,
-            City = user.City
-        };
+            var user = await _context.Users.FindAsync(id);
+            if (user == null) return false;
+
+            _context.Users.Remove(user);
+            await _context.SaveChangesAsync();
+            return true;
+        }
     }
 }

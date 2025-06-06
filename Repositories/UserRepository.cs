@@ -1,9 +1,8 @@
 ﻿using climby.Data;
 using climby.Models;
 using Microsoft.EntityFrameworkCore;
-using System.Threading.Tasks;
 using System.Collections.Generic;
-using System.Linq;
+using System.Threading.Tasks;
 
 namespace climby.Repositories
 {
@@ -16,28 +15,39 @@ namespace climby.Repositories
             _context = context;
         }
 
-        public async Task<User?> GetByFirebaseUidAsync(string firebaseUid)
+        public async Task<List<User>> GetAllAsync()
         {
-            return await _context.Users.FirstOrDefaultAsync(u => u.Firebase_uid == firebaseUid);
+            return await _context.Users.ToListAsync();
         }
 
-        public async Task CreateAsync(User user)
+        public async Task<User> GetByIdAsync(int id)
         {
-            _context.Users.Add(user);
-            await _context.SaveChangesAsync();
+            return await _context.Users.FindAsync(id);
         }
 
-        public async Task UpdateAsync(User user)
+        public async Task<User> GetByEmailAsync(string email)
+        {
+            return await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
+        }
+
+        public async Task AddAsync(User user)
+        {
+            await _context.Users.AddAsync(user);
+        }
+
+        public void Update(User user)
         {
             _context.Users.Update(user);
-            await _context.SaveChangesAsync();
         }
 
-        public async Task DeleteAsync(User user)
+        public void Remove(User user)
         {
             _context.Users.Remove(user);
-            await _context.SaveChangesAsync();
+        }
+
+        public async Task<bool> SaveChangesAsync()
+        {
+            return (await _context.SaveChangesAsync()) > 0;
         }
     }
 }
-

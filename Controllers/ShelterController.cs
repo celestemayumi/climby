@@ -1,7 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using climby.Services;
-using System.Security.Claims;
 
 namespace climby.Controllers
 {
@@ -17,14 +15,11 @@ namespace climby.Controllers
         }
 
         [HttpGet]
-        [Authorize]
-        public async Task<IActionResult> GetSheltersByCity()
+        public async Task<IActionResult> GetSheltersByCity([FromQuery] string city)
         {
-            var city = User.Claims.FirstOrDefault(c => c.Type == "city")?.Value;
-
             if (string.IsNullOrEmpty(city))
             {
-                return BadRequest(new { message = "Cidade não encontrada no token." });
+                return BadRequest(new { message = "Cidade é obrigatória." });
             }
 
             var shelters = await _shelterService.GetAllByCityAsync(city);

@@ -1,7 +1,7 @@
 ﻿using climby.DTOs;
 using climby.Services;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
+using System.Threading.Tasks;
 
 namespace climby.Controllers
 {
@@ -16,14 +16,32 @@ namespace climby.Controllers
             _userService = userService;
         }
 
-        [HttpGet("me")]
-        public async Task<IActionResult> GetMyUser()
+        [HttpPost("login")]
+        public async Task<IActionResult> Login([FromBody] LoginRequestDto loginDto)
         {
-            var uid = User.FindFirstValue("uid");
-            if (uid == null)
-                return Unauthorized("Usuário não autenticado.");
+            var user = await _userService.GetUserByEmailAsync(loginDto.Email);
 
-            var userDto = await _userService.GetUserByFirebaseUidAsync(uid);
+            if (user == null || user.Password != loginDto.Password)
+            {
+                return Unauthorized("Email ou senha inválidos.");
+            }
+
+            var response = new UserDto
+            {
+                Id = user.ID,
+                Name = user.Name,
+                Email = user.Email,
+                Country = user.Country,
+                City = user.City
+            };
+
+            return Ok(response);
+        }
+
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetUserById(int id)
+        {
+            var userDto = await _userService.GetUserByIdAsync(id);
             if (userDto == null)
                 return NotFound("Usuário não encontrado.");
 
@@ -33,14 +51,10 @@ namespace climby.Controllers
         [HttpPost]
         public async Task<IActionResult> CreateUser([FromBody] UserInfoDto dto)
         {
-            var uid = User.FindFirstValue("uid");
-            if (uid == null)
-                return Unauthorized("Usuário não autenticado.");
-
             try
             {
-                var createdUser = await _userService.CreateUserAsync(uid, dto);
-                return CreatedAtAction(nameof(GetMyUser), new { }, createdUser);
+                var createdUser = await _userService.CreateUserAsync(dto);
+                return CreatedAtAction(nameof(GetUserById), new { id = createdUser.Id }, createdUser);
             }
             catch (ArgumentException ex)
             {
@@ -52,29 +66,28 @@ namespace climby.Controllers
             }
         }
 
-        [HttpPut]
-        public async Task<IActionResult> UpdateUser([FromBody] UserInfoDto dto)
+        [HttpPut("{id}")]
+        public async Task<IActionResult> UpdateUser(int id, [FromBody] UserInfoDto dto)
         {
-            var uid = User.FindFirstValue("uid");
-            if (uid == null)
-                return Unauthorized("Usuário não autenticado.");
+            try
+            {
+                var updatedUser = await _userService.UpdateUserAsync(id, dto);
+                if (updatedUser == null)
+                    return NotFound("Usuário não encontrado.");
 
-            var updatedUser = await _userService.UpdateUserAsync(uid, dto);
-            if (updatedUser == null)
-                return NotFound("Usuário não encontrado.");
-
-            return Ok(updatedUser);
+                return Ok(updatedUser);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
 
-        [HttpDelete]
-        public async Task<IActionResult> DeleteUser()
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteUser(int id)
         {
-            var uid = User.FindFirstValue("uid");
-            if (uid == null)
-                return Unauthorized("Usuário não autenticado.");
-
-            var result = await _userService.DeleteUserAsync(uid);
-            if (!result)
+            var deleted = await _userService.DeleteUserAsync(id);
+            if (!deleted)
                 return NotFound("Usuário não encontrado.");
 
             return NoContent();

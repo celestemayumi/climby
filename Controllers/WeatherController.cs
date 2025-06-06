@@ -1,8 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
+﻿using Microsoft.AspNetCore.Mvc;
 using climby.Services;
-
 
 namespace climby.Controllers
 {
@@ -18,19 +15,20 @@ namespace climby.Controllers
         }
 
         [HttpGet("today")]
-        [Authorize]
-        public async Task<IActionResult> GetWeatherToday()
+        public async Task<IActionResult> GetWeatherToday([FromQuery] string city)
         {
+            if (string.IsNullOrWhiteSpace(city))
+                return BadRequest("A cidade precisa ser informada.");
 
-            var firebaseUid = User.FindFirstValue("uid");
-            Console.WriteLine("Firebase UID: " + firebaseUid);
-
-
-            if (string.IsNullOrEmpty(firebaseUid))
-                return Unauthorized("Token Firebase inválido");
-
-            var weatherInfo = await _weatherService.GetWeatherByFirebaseUidAsync(firebaseUid);
-            return Ok(weatherInfo);
+            try
+            {
+                var weatherInfo = await _weatherService.GetWeatherByCityAsync(city);
+                return Ok(weatherInfo);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Erro ao buscar clima: {ex.Message}");
+            }
         }
     }
 }

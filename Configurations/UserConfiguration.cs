@@ -12,11 +12,11 @@ namespace climby.Configurations
             builder.HasKey(u => u.ID);
 
             builder.Property(u => u.ID).HasColumnName("ID");
-            builder.Property(u => u.Firebase_uid).HasColumnName("FIREBASE_UID");
             builder.Property(u => u.Name).HasColumnName("NAME");
             builder.Property(u => u.Email).HasColumnName("EMAIL");
             builder.Property(u => u.Country).HasColumnName("COUNTRY");
             builder.Property(u => u.City).HasColumnName("CITY");
+            builder.Property(u => u.Password).HasColumnName("PASSWORD");
         }
     }
 }
