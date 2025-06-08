@@ -33,8 +33,8 @@
 
 1. Clone o repositório:
    ```bash
-   git clone https://github.com/seu-usuario/climby-api.git
-   cd climby-api
+   git clone https://github.com/celestemayumi/climby.git
+   cd climby
    ```
 
 2. Restaure os pacotes e execute as migrações (caso tenha):
